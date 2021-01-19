@@ -1,5 +1,6 @@
 #include <iostream>
 #include <winsock2.h>
+#include <list>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -8,6 +9,7 @@
 using namespace std;
 
 void ErrOutput(const char *errMassage);
+DWORD WINAPI SendMassage(LPVOID connectSocket);
 
 int main()
 {
@@ -16,8 +18,7 @@ int main()
 	SOCKADDR_IN serverAddr, clientAddr;
 
 	int sizeofClientAddr;
-
-	char massage[BUFSIZE];
+	//list<SOCKET> connectSocketList;
 
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 		ErrOutput("WASStartup() Error!");
@@ -38,29 +39,58 @@ int main()
 		ErrOutput("listen() Error!");
 
 	cout << "Waitting Client" << endl;
-	sizeofClientAddr = sizeof(clientAddr);
-	connectSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &sizeofClientAddr);
-	if (connectSocket == INVALID_SOCKET)
-		ErrOutput("accept() Error!");
+
+	HANDLE hThread;
 
 	while (true)
 	{
-		int recvSize = recv(connectSocket, massage, sizeof(massage), 0);
-		if (recvSize == -1)
-			ErrOutput("recv() Error!");
-		if (massage == "end")
-			break;
-		cout << massage << endl;
+		sizeofClientAddr = sizeof(clientAddr);
+		connectSocket = accept(listenSocket, (SOCKADDR*)&clientAddr, &sizeofClientAddr);
+		if (connectSocket == INVALID_SOCKET)
+			ErrOutput("accept() Error!");
+
+		//connectSocketList.push_back(connectSocket);
+		cout << "ConnectClient : " << connectSocket << endl;
+
+		hThread = CreateThread(NULL, 0, SendMassage, (LPVOID)connectSocket, 0, NULL);
+
+		if (hThread == NULL)
+			closesocket(connectSocket);
+		else
+			CloseHandle(hThread);
 	}
 
-	closesocket(connectSocket);
+	//closesocket(connectSocket);
 	closesocket(listenSocket);
 	WSACleanup();
 	return 0;
 }
 
-void ErrOutput(const char *errMassage)
+void ErrOutput(const char* errMassage)
 {
 	cout << errMassage << endl;
 	exit(1);
+}
+
+DWORD WINAPI SendMassage(LPVOID connectSocket)
+{
+	char massage[BUFSIZE];
+	while (true)
+	{
+		int recvSize = recv((SOCKET)connectSocket, massage, sizeof(massage), 0);
+		if (recvSize == -1)
+		{
+			//connectSocketList.remove(*connectSocket);
+			ErrOutput("recv() Error!");
+		}
+		if (massage == "end")
+		{
+			//connectSocketList.remove(*connectSocket);
+			break;
+		}
+		cout << "Socket : " << (SOCKET)connectSocket << " -> " << massage << endl;
+	}
+	cout << "Close Socket : " << (SOCKET)connectSocket << endl;
+	closesocket((SOCKET)connectSocket);
+	return 0;
 }

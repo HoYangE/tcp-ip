@@ -35,7 +35,7 @@ int main()
 	while (true)
 	{
 		cin.getline(massage, BUFSIZE);
-		if (sizeof(massage) >= BUFSIZE)
+		if (sizeof(massage) > BUFSIZE)
 			ErrOutput("too many text");
 		send(connectSocket, massage, sizeof(massage), 0);
 		if (massage == "end")
